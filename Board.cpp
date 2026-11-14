@@ -8,19 +8,21 @@ Board::Board()
     memset(board, 0, sizeof(board));
     for (int i = 0; i < 20; i++) {
         for (int j = 0; j < 10; j++) {
-            boardShapes[i][j] = RectangleShape(Vector2f(20, 20));
-            boardShapes[i][j].setPosition({j * 20.f, i * 20.f});
+            boardShapes[i][j] = RectangleShape(Vector2f(blockSize, blockSize));
+            boardShapes[i][j].setPosition({j * (float)blockSize, i * (float)blockSize});
             boardShapes[i][j].setFillColor(Color(50, 50, 50));
-            boardShapes[i][j].setOutlineThickness(2.f);
+            boardShapes[i][j].setOutlineThickness(-1.4f);
             boardShapes[i][j].setOutlineColor(Color(1, 1, 1));
             
         }
     }
+    indNextPart = rand() % 7;
 }
 
 bool Board::InstallPart(){
  //   srand(time(NULL)); // lo pase a main 
-    indNewPart = rand()%7;
+    indNewPart = indNextPart;
+    indNextPart = rand() % 7; // Genera la siguiente
 
     currentPart = parts.ConsultPart(indNewPart);
     int sz = (int) currentPart.size();
@@ -36,17 +38,11 @@ bool Board::InstallPart(){
             }
         }
     }
+
     indColorNewPart = indNewPart + 1;
-    switch (indColorNewPart) {
-        case 1: newPartColor = Color(240, 240, 0); break;   // rgb(240, 240, 0)   O amarillo
-        case 2: newPartColor = Color(0, 0, 240); break;     // rgb(0, 0, 240)     J azul
-        case 3: newPartColor = Color(240, 160, 0); break;   // rgb(240, 160, 0)   L naranja
-        case 4: newPartColor = Color(0, 240, 0); break;     // rgb(0, 240, 0)     S verde
-        case 5: newPartColor = Color(240, 0, 0); break;     // rgb(240, 0, 0)     Z rojo
-        case 6: newPartColor = Color(160, 0, 240); break;   // rgb(160, 0, 240)   T púrpura
-        case 7: newPartColor = Color(0, 240, 240); break;   // rgb(0, 240, 240)   I cian
-    }   
-        return true;             
+    newPartColor = colors[indColorNewPart];  
+    return true;
+
 }
 
 bool Board::UpdateBoard(){
@@ -93,20 +89,8 @@ bool Board::UpdateBoard(){
 void Board::UpdateBoardColors(){
     for (int i = 0; i < 20; i++) {
         for (int j = 0; j < 10; j++) {
-            switch (board[i][j]) {
-                case 0: boardShapes[i][j].setFillColor(Color(50, 50, 50)); break;    // rgb(50, 50, 50)    vacío
-                case 1: boardShapes[i][j].setFillColor(Color(240, 240, 0)); break;   // rgb(240, 240, 0)   O amarillo
-                case 2: boardShapes[i][j].setFillColor(Color(0, 0, 240)); break;     // rgb(0, 0, 240)     J azul
-                case 3: boardShapes[i][j].setFillColor(Color(240, 160, 0)); break;   // rgb(240, 160, 0)   L naranja
-                case 4: boardShapes[i][j].setFillColor(Color(0, 240, 0)); break;     // rgb(0, 240, 0)     S verde
-                case 5: boardShapes[i][j].setFillColor(Color(240, 0, 0)); break;     // rgb(240, 0, 0)     Z rojo
-                case 6: boardShapes[i][j].setFillColor(Color(160, 0, 240)); break;   // rgb(160, 0, 240)   T púrpura
-                case 7: boardShapes[i][j].setFillColor(Color(0, 240, 240)); break;   // rgb(0, 240, 240)   I cian
-                default:
-                    boardShapes[i][j].setFillColor(newPartColor);
-                    break; 
-            }
-           
+            if (board[i][j] < 0) boardShapes[i][j].setFillColor(newPartColor);
+            else boardShapes[i][j].setFillColor(colors[board[i][j]]);
         }
     }
 }
@@ -226,6 +210,43 @@ void Board::Left(){
     }
 }
 
+//###### implementacion de la barra
+
+int Board::HardDrop(){
+    while (true) {
+        int aux = 0;
+        // 1. Verificar si la pieza actual (-1) tiene espacio libre abajo
+        for (int i = 18; i >= 0; i--){
+            for (int j = 0; j < 10; j++) {
+                if (board[i][j] == -1) {
+                    if (board[i +1][j] <= 0) aux++;
+                }
+            }
+        }
+        // 2. Si las 4 casillas pueden bajar, desplazamos la pieza un nivel abajo
+        if (aux==4) {
+            indY++;
+            for (int i = 18; i >= 0; i--) {
+                for (int j = 0; j < 10; j++) {
+                    if (board[i][j] == -1) {
+                        board[i][j] = 0;
+                        board[i + 1][j] = -1;
+                    }
+                }
+            }
+        }
+        // 3. Cuando ya no puede bajar más, la fijamos en el tablero con su color
+        else {
+            for (int i = 19; i >= 0; i--) {
+                for (int j = 0; j < 10; j++) {
+                    if (board[i][j] == -1) board[i][j] = indColorNewPart;
+                }
+            }
+            return 1;  // Retorna 1 para avisar que la pieza se asentó
+        }
+    }    
+}
+
 int Board::CheckLines(){
     int aux=0, lines=0;
 
@@ -244,10 +265,44 @@ int Board::CheckLines(){
 
 }
 
+void Board::GameOverFillRow(int row, int color){
+    for (int j=0; j < 10; j++) board[row][j] = color;
+}
 
+void Board::ClearBoard(){
+    memset(board,0,sizeof(board));
+
+}
+
+//  Dibujar la siguiente pieza (Next Piece) adaptado a SFML 3
+void Board::DrawNextPart(RenderTarget& rt) const {
+    // Obtenemos la matriz de la pieza en cola
+    vector<vector<bool>> nextPartMat = const_cast<Parts&>(parts).ConsultPart(indNextPart);
+    int sz = (int)nextPartMat.size();
+
+    // Posición en píxeles del panel lateral derecho (Tablero termina en X=210px)
+    float offsetX = 405.f;
+    float offsetY = 100.f;
+
+    // Bloque individual en SFML 3
+    RectangleShape block(Vector2f((float)blockSize, (float)blockSize));
+    block.setFillColor(colors[indNextPart + 1]);
+    block.setOutlineThickness(-1.03f * ((float)blockSize / 20.f));
+    block.setOutlineColor(Color(1, 1, 1));
+
+    // Dibujamos solo las posiciones con valor 1 (bloques activos)
+    for (int i = 0; i < sz; i++) {
+        for (int j = 0; j < sz; j++) {
+            if (nextPartMat[i][j]) {
+                block.setPosition({offsetX + j * (float)blockSize, offsetY + i * (float)blockSize});
+                rt.draw(block);
+            }
+        }
+    }
+}
 
 void Board::draw(RenderTarget& rt, RenderStates rs) const{
-    rs.transform.translate({10.f, 10.f});
+    rs.transform.translate({17.f, 17.f}); // aqui doy un poco el marco
     for (int i = 0; i < 20; i++) {
         for (int j = 0; j < 10; j++) {
             rt.draw(boardShapes[i][j], rs);
