@@ -266,7 +266,29 @@ int Board::CheckLines(){
 }
 
 void Board::GameOverFillRow(int row, int color){
-    for (int j=0; j < 10; j++) board[row][j] = color;
+    for(int j = 0; j < 10; j++) board[row][j] = color;
+}
+
+void Board::StartGameOverAnimation(){
+    animPhase = 0;
+    animRow = 0;
+    rowClock.restart();
+}
+
+// Devuelve true una sola vez, al terminar la animación
+bool Board::UpdateGameOverAnimation(){
+    if(animPhase >= 2) return false;
+    if(rowClock.getElapsedTime().asMilliseconds() < 50) return false;
+    rowClock.restart();
+
+    GameOverFillRow(animRow, animPhase == 0 ? 1 + animRow % 7 : 0);
+    UpdateBoardColors();
+
+    if(++animRow >= 20){
+        animRow = 0;
+        animPhase++;
+    }
+    return animPhase == 2;
 }
 
 void Board::ClearBoard(){

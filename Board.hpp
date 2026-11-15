@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <cstring>
@@ -22,6 +23,9 @@ class Board : public Drawable
 
         int board[20][10];
 
+        Clock rowClock;
+        int animPhase = 0, animRow = 0;
+
         RectangleShape boardShapes[20][10];
         Color newPartColor;
         inline static const Color colors[8] = {
@@ -33,6 +37,8 @@ class Board : public Drawable
             Color(240, 0, 0),     // rgb(240, 0, 0)     5 Z rojo
             Color(160, 0, 240),   // rgb(160, 0, 240)   6 T púrpura
             Color(0, 240, 240)    // rgb(0, 240, 240)   7 I cian
+
+
         };
 
 
@@ -52,6 +58,8 @@ class Board : public Drawable
         int CheckLines();
         void ClearBoard();
         void GameOverFillRow(int row, int color);
+        void StartGameOverAnimation();
+        bool UpdateGameOverAnimation();
         void DrawNextPart(RenderTarget& rt) const;
         virtual void draw(RenderTarget& rt, RenderStates rs) const override; 
 };
