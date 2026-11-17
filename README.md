@@ -1,4 +1,5 @@
 # Tetris in C++ mit SFML 3
+Eigenständig entwickeltes Projekt auf Basis verschiedener Tutorials.
 
 Ein komplettes Tetris in C++ mit SFML 3. Ich habe es als Lernprojekt für **objektorientierte Programmierung (OOP)** gemacht, während meiner Umschulung zum Fachinformatiker für Anwendungsentwicklung.
 
